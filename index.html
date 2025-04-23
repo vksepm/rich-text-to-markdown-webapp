@@ -247,16 +247,18 @@
                     showMessage('No suitable text content (HTML or Plain) found on clipboard.', true);
                     console.warn('Paste ignored: No usable text/html or text/plain data found.');
                     return; // Exit if no usable data
-                }
-
-                // Display the result
+                }                // Display the result
                 markdownOutput.value = markdown.trim();
                 console.log("Markdown output updated.");
                 hasMarkdown = markdownOutput.value.length > 0;
                 updateButtonStates();
                 clearMessage(); // Clear any previous messages
-                renderPreviewContainer.classList.add('hidden'); // Hide preview on new paste
                 hidePasteHint(); // Hide hint after successful paste
+
+                // Automatically render the markdown
+                if (hasMarkdown) {
+                    handleRender();
+                }
 
             } catch (error) {
                 console.error('Error during Markdown conversion process:', error);
