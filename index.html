@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rich Text to Markdown Converter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="https://unpkg.com/turndown/dist/turndown.js"></script>
+    <script src="https://unpkg.com/turndown-plugin-gfm/dist/turndown-plugin-gfm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        /* Add some basic styling for the contenteditable placeholder */
+        .paste-area:empty::before {
+            content: attr(data-placeholder);
+            color: #9ca3af; /* gray-400 */
+            cursor: text;
+        }
+        /* Style for the rendered HTML output */
+        .rendered-markdown-content {
+            /* Basic prose styling */
+            prose-p:text-base prose-p:leading-relaxed;
+            prose-headings:text-xl prose-headings:font-semibold prose-headings:mt-4 prose-headings:mb-2;
+            prose-ul:list-disc prose-ul:ml-6;
+            prose-ol:list-decimal prose-ol:ml-6;
+            prose-blockquote:border-l-4 prose-blockquote:pl-4 prose-blockquote:italic;
+            prose-code:bg-gray-100 prose-code:p-1 prose-code:rounded;
+            prose-pre:bg-gray-800 prose-pre:text-white prose-pre:p-4 prose-pre:rounded prose-pre:overflow-x-auto;
+            prose-a:text-blue-600 hover:prose-a:underline;
+            prose-strong:font-bold;
+            prose-em:italic;
+        }
+        /* Ensure buttons have good touch target size */
+        button {
+            min-height: 44px;
+            min-width: 44px;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans flex flex-col items-center min-h-screen p-4 md:p-8">
+
+    <div class="w-full max-w-4xl bg-white rounded-lg shadow-md p-6">
+        <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">Rich Text to Markdown Converter</h1>
+
+        <div class="mb-4">
+            <label for="paste-area" class="block text-sm font-medium text-gray-700 mb-1">Paste your rich text content here:</label>
+            <div
+                id="paste-area"
+                contenteditable="true"
+                data-placeholder="Click here and paste (Ctrl+V / Cmd+V)"
+                class="paste-area w-full h-40 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent overflow-auto resize-y bg-white"
+                aria-label="Paste area for rich text"
+            ></div>
+        </div>
+
+        <div class="mb-4">
+            <label for="markdown-output" class="block text-sm font-medium text-gray-700 mb-1">Generated Markdown:</label>
+            <textarea
+                id="markdown-output"
+                readonly
+                class="w-full h-60 p-3 border border-gray-300 rounded-md bg-gray-50 font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                aria-label="Generated Markdown output"
+                placeholder="Markdown will appear here..."
+            ></textarea>
+        </div>
+
+        <div class="flex flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-4 mb-6">
+            <button id="render-button" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
+                <i class="fas fa-eye mr-2"></i>Render Preview
+            </button>
+            <button id="copy-button" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
+                <i class="fas fa-copy mr-2"></i>Copy Markdown
+            </button>
+        </div>
+
+         <div id="render-preview-container" class="hidden">
+             <h2 class="text-lg font-semibold text-gray-700 mb-2 border-t pt-4">Rendered Preview:</h2>
+             <div id="render-output" class="p-4 border border-gray-200 rounded-md bg-white rendered-markdown-content min-h-[100px]">
+                 </div>
+        </div>
+
+         <div id="message-area" class="text-center text-sm text-green-600 mt-4 h-5"></div>
+
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const pasteArea = document.getElementById('paste-area');
+        const markdownOutput = document.getElementById('markdown-output');
+        const renderButton = document.getElementById('render-button');
+        const copyButton = document.getElementById('copy-button');
+        const renderPreviewContainer = document.getElementById('render-preview-container');
+        const renderOutput = document.getElementById('render-output');
+        const messageArea = document.getElementById('message-area');
+
+        // --- State ---
+        let turndownService = null; // Initialize later
+        let hasMarkdown = false; // Track if there is content to render/copy
+
+        // --- Initialization ---
+        function initializeTurndown() {
+            // Check if Turndown and the GFM plugin are loaded
+            if (typeof TurndownService !== 'undefined' && typeof turndownPluginGfm !== 'undefined') {
+                turndownService = new TurndownService({
+                    headingStyle: 'atx', // Use '#' for headings
+                    codeBlockStyle: 'fenced', // Use ``` for code blocks
+                    emDelimiter: '*', // Use * for emphasis
+                    strongDelimiter: '**', // Use ** for strong
+                });
+                // Use the GFM plugin
+                turndownService.use(turndownPluginGfm.gfm);
+                console.log('Turndown service initialized with GFM plugin.');
+            } else {
+                console.error('TurndownService or GFM plugin not loaded.');
+                // Disable functionality or show an error message
+                showMessage('Error: Markdown conversion library failed to load.', true);
+                pasteArea.contentEditable = false; // Prevent pasting if library fails
+                renderButton.disabled = true;
+                copyButton.disabled = true;
+            }
+        }
+
+        // --- Event Listeners ---
+        pasteArea.addEventListener('paste', handlePaste);
+        renderButton.addEventListener('click', handleRender);
+        copyButton.addEventListener('click', handleCopy);
+
+        // --- Event Handlers ---
+        function handlePaste(event) {
+            // Prevent the default paste behavior (inserting rich text directly)
+            event.preventDefault();
+
+            if (!turndownService) {
+                showMessage('Markdown converter is not ready.', true);
+                return;
+            }
+
+            // Get clipboard data
+            const clipboardData = event.clipboardData || window.clipboardData;
+            if (!clipboardData) {
+                showMessage('Could not access clipboard data.', true);
+                return;
+            }
+
+            // Prioritize HTML content from the clipboard
+            const pastedHtml = clipboardData.getData('text/html');
+            const pastedText = clipboardData.getData('text/plain');
+
+            let markdown = '';
+
+            try {
+                if (pastedHtml) {
+                    console.log("Pasted HTML detected.");
+                    // Sanitize HTML slightly before conversion (basic example)
+                    // A more robust sanitizer might be needed for complex cases
+                    const cleanHtml = sanitizeHtml(pastedHtml);
+                    markdown = turndownService.turndown(cleanHtml);
+                } else if (pastedText) {
+                    console.log("Pasted Plain Text detected.");
+                    // If only plain text, treat it as pre-formatted (escape Markdown characters)
+                    // or just pass it through if simple Markdown conversion is desired.
+                    // For simplicity here, we'll just pass it through Turndown
+                    // which will handle basic escaping.
+                    markdown = turndownService.turndown(pastedText); // Turndown handles basic text reasonably
+                } else {
+                    showMessage('No suitable content found on clipboard (HTML or Plain Text).', true);
+                    return;
+                }
+
+                // Display the converted Markdown
+                markdownOutput.value = markdown.trim();
+                hasMarkdown = markdownOutput.value.length > 0;
+                updateButtonStates();
+                clearMessage(); // Clear any previous messages
+                // Optionally clear the paste area after successful paste
+                pasteArea.innerHTML = '';
+                // Hide preview on new paste
+                renderPreviewContainer.classList.add('hidden');
+
+
+            } catch (error) {
+                console.error('Error during Markdown conversion:', error);
+                showMessage('An error occurred during conversion.', true);
+                hasMarkdown = false;
+                updateButtonStates();
+            }
+        }
+
+        function handleRender() {
+            if (!hasMarkdown) return;
+
+            try {
+                // Check if Marked library is loaded
+                if (typeof marked === 'undefined') {
+                    showMessage('Error: Markdown rendering library failed to load.', true);
+                    console.error('Marked library not loaded.');
+                    return;
+                }
+
+                const markdown = markdownOutput.value;
+                // Configure marked (optional, but good practice)
+                marked.setOptions({
+                    gfm: true, // Enable GitHub Flavored Markdown
+                    breaks: true, // Convert single line breaks to <br>
+                    mangle: false, // Disable email address obfuscation
+                    headerIds: false // Disable automatic header IDs
+                });
+                const html = marked.parse(markdown);
+                renderOutput.innerHTML = html;
+                renderPreviewContainer.classList.remove('hidden'); // Show the preview container
+                clearMessage();
+
+                // Scroll to the preview section for better visibility on small screens
+                renderPreviewContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            } catch (error) {
+                console.error('Error rendering Markdown:', error);
+                showMessage('An error occurred while rendering the preview.', true);
+                renderPreviewContainer.classList.add('hidden'); // Hide preview on error
+            }
+        }
+
+        function handleCopy() {
+            if (!hasMarkdown) return;
+
+            navigator.clipboard.writeText(markdownOutput.value)
+                .then(() => {
+                    showMessage('Markdown copied to clipboard!');
+                    // Provide visual feedback on the button
+                    const originalText = copyButton.innerHTML;
+                    copyButton.innerHTML = '<i class="fas fa-check mr-2"></i>Copied!';
+                    copyButton.disabled = true; // Briefly disable
+                    setTimeout(() => {
+                        copyButton.innerHTML = originalText;
+                        copyButton.disabled = !hasMarkdown; // Re-enable based on content
+                        clearMessage(); // Clear the success message after a delay
+                    }, 2000); // Reset after 2 seconds
+                })
+                .catch(err => {
+                    console.error('Failed to copy text: ', err);
+                    showMessage('Failed to copy Markdown.', true);
+                });
+        }
+
+        // --- Utility Functions ---
+        function updateButtonStates() {
+            renderButton.disabled = !hasMarkdown;
+            copyButton.disabled = !hasMarkdown;
+        }
+
+        function showMessage(message, isError = false) {
+            messageArea.textContent = message;
+            messageArea.className = `text-center text-sm mt-4 h-5 ${isError ? 'text-red-600' : 'text-green-600'}`;
+        }
+
+        function clearMessage() {
+            messageArea.textContent = '';
+        }
+
+        function sanitizeHtml(htmlString) {
+            // VERY basic sanitizer: removes <script> tags and attributes starting with 'on'
+
+            // Basic removal (less secure)
+            let cleaned = htmlString.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ''); // Remove script blocks
+            cleaned = cleaned.replace(/ on\w+="[^"]*"/g, ''); // Remove on... event handlers
+            cleaned = cleaned.replace(/ on\w+='[^']*'/g, ''); // Remove on... event handlers (single quotes)
+            cleaned = cleaned.replace(/ on\w+=[\w-]+/g, ''); // Remove on... event handlers (no quotes)
+            cleaned = cleaned.replace(/ href="javascript:[^"]*"/g, ' href="#"'); // Neutralize javascript: links
+             cleaned = cleaned.replace(/ src="javascript:[^"]*"/g, ' src="#"'); // Neutralize javascript: links in src
+            return cleaned;
+        }
+
+        // --- Initial Setup ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeTurndown();
+            updateButtonStates(); // Ensure buttons are initially disabled
+        });
+
+    </script>
+
+</body>
+</html>
