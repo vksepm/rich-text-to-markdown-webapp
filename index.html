@@ -3,60 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rich Text to Markdown Converter</title>
+    <title>Rich Text to Markdown Converter</title>    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.10/purify.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <script src="https://unpkg.com/turndown/dist/turndown.js"></script>
     <script src="https://unpkg.com/turndown-plugin-gfm/dist/turndown-plugin-gfm.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
-        /* Style for the rendered HTML output */
-        .rendered-markdown-content {
-            /* Basic prose styling (Tailwind Typography plugin classes can also be used if preferred) */
-            h1 { @apply text-2xl font-bold my-4; }
-            h2 { @apply text-xl font-semibold my-3; }
-            h3 { @apply text-lg font-semibold my-2; }
-            p { @apply my-2 leading-relaxed; }
-            ul { @apply list-disc list-inside my-2 ml-4; }
-            ol { @apply list-decimal list-inside my-2 ml-4; }
-            blockquote { @apply border-l-4 border-gray-300 pl-4 italic my-2 text-gray-600; }
-            code:not(pre code) { @apply bg-gray-100 text-red-600 px-1 py-0.5 rounded text-sm; } /* Inline code */
-            pre { @apply bg-gray-800 text-white p-4 rounded overflow-x-auto my-2 text-sm; } /* Code block */
-            pre code { @apply bg-transparent text-white p-0 rounded-none; } /* Code inside pre */
-            a { @apply text-blue-600 hover:underline; }
-            strong { @apply font-bold; }
-            em { @apply italic; }
-            table { @apply table-auto border-collapse border border-gray-300 my-4 w-full; }
-            th, td { @apply border border-gray-200 px-4 py-2 text-left; }
-            th { @apply bg-gray-100 font-semibold; }
-            hr { @apply my-4 border-t border-gray-300; }
-        }
+        /* Standard CSS for rendered Markdown content */
+        .rendered-markdown-content h1 { font-size: 1.875rem; font-weight: 700; margin-top: 1rem; margin-bottom: 1rem; }
+        .rendered-markdown-content h2 { font-size: 1.5rem; font-weight: 600; margin-top: 0.75rem; margin-bottom: 0.75rem; }
+        .rendered-markdown-content h3 { font-size: 1.25rem; font-weight: 600; margin-top: 0.5rem; margin-bottom: 0.5rem; }
+        .rendered-markdown-content h4 { font-size: 1.125rem; font-weight: 600; margin-top: 0.5rem; margin-bottom: 0.5rem; }
+        .rendered-markdown-content p { margin-top: 0.5rem; margin-bottom: 0.5rem; line-height: 1.625; }
+        .rendered-markdown-content ul { list-style-type: disc; list-style-position: inside; margin-top: 0.5rem; margin-bottom: 0.5rem; margin-left: 1rem; }
+        .rendered-markdown-content ol { list-style-type: decimal; list-style-position: inside; margin-top: 0.5rem; margin-bottom: 0.5rem; margin-left: 1rem; }
+        .rendered-markdown-content li > ul,
+        .rendered-markdown-content li > ol { margin-left: 1.5rem; margin-top: 0.25rem; margin-bottom: 0.25rem; }
+        .rendered-markdown-content blockquote { border-left: 4px solid #d1d5db; padding-left: 1rem; font-style: italic; margin-top: 0.5rem; margin-bottom: 0.5rem; color: #4b5563; }
+        .rendered-markdown-content code:not(pre code) { background-color: #f3f4f6; color: #dc2626; padding: 0.25rem 0.25rem; border-radius: 0.25rem; font-size: 0.875em; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+        .rendered-markdown-content pre { background-color: #1f2937; color: #f9fafb; padding: 1rem; border-radius: 0.375rem; overflow-x: auto; margin-top: 0.5rem; margin-bottom: 0.5rem; font-size: 0.875rem; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+        .rendered-markdown-content pre code { background-color: transparent; color: inherit; padding: 0; border-radius: 0; font-size: 1em; }
+        .rendered-markdown-content a { color: #2563eb; text-decoration: underline; }
+        .rendered-markdown-content a:hover { color: #1d4ed8; }
+        .rendered-markdown-content strong { font-weight: 700; }
+        .rendered-markdown-content em { font-style: italic; }
+        .rendered-markdown-content table { border-collapse: collapse; border: 1px solid #d1d5db; margin-top: 1rem; margin-bottom: 1rem; width: 100%; }
+        .rendered-markdown-content th,
+        .rendered-markdown-content td { border: 1px solid #e5e7eb; padding: 0.5rem 1rem; text-align: left; }
+        .rendered-markdown-content th { background-color: #f3f4f6; font-weight: 600; }
+        .rendered-markdown-content hr { margin-top: 1rem; margin-bottom: 1rem; border-top: 1px solid #d1d5db; }
         /* Ensure buttons have good touch target size */
-        button {
-            min-height: 44px; /* Standard touch target size */
-            min-width: 44px;
-        }
-        /* Add a subtle hint for pasting */
-        body::before {
-            content: 'Paste anywhere to convert...';
-            position: fixed;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: rgba(0, 0, 0, 0.6);
-            color: white;
-            padding: 5px 15px;
-            border-radius: 15px;
-            font-size: 0.8rem;
-            opacity: 0;
-            transition: opacity 0.5s ease-in-out;
-            pointer-events: none; /* Don't interfere with clicks */
-            z-index: 10;
-        }
-        body.show-paste-hint::before {
-            opacity: 1;
-        }
-
+        button { min-height: 44px; min-width: 44px; }
+        /* Paste hint styling */
+        body::before { content: 'Paste anywhere to convert...'; position: fixed; top: 10px; left: 50%; transform: translateX(-50%); background-color: rgba(0, 0, 0, 0.6); color: white; padding: 5px 15px; border-radius: 15px; font-size: 0.8rem; opacity: 0; transition: opacity 0.5s ease-in-out; pointer-events: none; z-index: 10; }
+        body.show-paste-hint::before { opacity: 1; }
     </style>
 </head>
 <body class="bg-gray-100 font-sans flex flex-col items-center min-h-screen p-4 md:p-8">
@@ -101,69 +82,92 @@
 
     <script>
         // --- DOM Elements ---
-        // No pasteArea needed anymore
         const markdownOutput = document.getElementById('markdown-output');
         const renderButton = document.getElementById('render-button');
         const copyButton = document.getElementById('copy-button');
-        const clearButton = document.getElementById('clear-button'); // New button
+        const clearButton = document.getElementById('clear-button');
         const renderPreviewContainer = document.getElementById('render-preview-container');
         const renderOutput = document.getElementById('render-output');
         const messageArea = document.getElementById('message-area');
-        const bodyElement = document.body; // For paste hint
+        const bodyElement = document.body;
 
         // --- State ---
-        let turndownService = null; // Initialize later
-        let hasMarkdown = false; // Track if there is content to render/copy/clear
-        let hintTimeout = null; // Timeout for paste hint
+        let turndownService = null;
+        let hasMarkdown = false;
+        let hintTimeout = null;
+
+        // --- Cleanup Function ---
+        function cleanup() {
+            document.removeEventListener('paste', handlePaste);
+            renderButton.removeEventListener('click', handleRender);
+            copyButton.removeEventListener('click', handleCopy);
+            clearButton.removeEventListener('click', handleClear);
+            clearTimeout(hintTimeout);
+        }
 
         // --- Initialization ---
         function initializeTurndown() {
-            // Check if Turndown and the GFM plugin are loaded
-            if (typeof TurndownService !== 'undefined' && typeof turndownPluginGfm !== 'undefined') {
-                turndownService = new TurndownService({
-                    headingStyle: 'atx', // Use '#' for headings
-                    codeBlockStyle: 'fenced', // Use ``` for code blocks
-                    emDelimiter: '*', // Use * for emphasis
-                    strongDelimiter: '**', // Use ** for strong
-                });
-                // Use the GFM plugin
-                turndownService.use(turndownPluginGfm.gfm);
-                console.log('Turndown service initialized with GFM plugin.');
-                showPasteHint(); // Show hint on load
-            } else {
-                console.error('TurndownService or GFM plugin not loaded.');
-                showMessage('Error: Markdown conversion library failed to load.', true);
-                // Disable functionality if library fails
+            // Check if all required libraries are loaded
+            const requiredLibraries = {
+                'Turndown': typeof TurndownService !== 'undefined',
+                'TurndownGFM': typeof turndownPluginGfm !== 'undefined',
+                'DOMPurify': typeof DOMPurify !== 'undefined',
+                'Marked': typeof marked !== 'undefined'
+            };
+
+            const missingLibraries = Object.entries(requiredLibraries)
+                .filter(([_, loaded]) => !loaded)
+                .map(([name]) => name);
+
+            if (missingLibraries.length > 0) {
+                console.error(`Missing required libraries: ${missingLibraries.join(', ')}`);
+                showMessage(`Error: Required libraries (${missingLibraries.join(', ')}) failed to load.`, true);
                 renderButton.disabled = true;
                 copyButton.disabled = true;
                 clearButton.disabled = true;
-                // Prevent pasting by not adding the listener if service failed
-                return false; // Indicate failure
+                return false;
+            }            try {
+                console.log('Initializing TurndownService...');
+                turndownService = new TurndownService({
+                    headingStyle: 'atx',
+                    codeBlockStyle: 'fenced',
+                    emDelimiter: '*',
+                    strongDelimiter: '**',
+                });
+                console.log('TurndownService created successfully');
+                
+                if (typeof turndownPluginGfm === 'undefined') {
+                    console.error('turndownPluginGfm is undefined!');
+                    throw new Error('GFM plugin not loaded');
+                }
+                
+                turndownService.use(turndownPluginGfm.gfm);
+                console.log('Turndown service initialized with GFM plugin.');
+                showPasteHint();
+                return true;
+            } catch (error) {
+                console.error('Error initializing Turndown:', error);
+                showMessage('Error: Failed to initialize markdown converter.', true);
+                return false;
             }
-            return true; // Indicate success
         }
 
         // --- Event Listeners ---
-        // Listen for paste on the entire document
         document.addEventListener('paste', handlePaste);
         renderButton.addEventListener('click', handleRender);
         copyButton.addEventListener('click', handleCopy);
-        clearButton.addEventListener('click', handleClear); // Listener for the new button
+        clearButton.addEventListener('click', handleClear);
+        window.addEventListener('unload', cleanup);
 
         // --- Event Handlers ---
         function handlePaste(event) {
-            // Prevent the default paste behavior only if the target isn't an input/textarea
-            // (though we don't have any others here, it's good practice)
-            if (event.target.tagName !== 'INPUT' && event.target.tagName !== 'TEXTAREA' && !event.target.isContentEditable) {
-                 event.preventDefault();
-            } else {
-                // Allow default paste in inputs/textareas if any existed
-                return;
-            }
-
+            console.log('Paste event triggered.'); // Log paste event start            // Always prevent default paste behavior and handle it ourselves
+            event.preventDefault();
+            console.log('Default paste prevented, handling conversion...');
 
             if (!turndownService) {
-                showMessage('Markdown converter is not ready.', true);
+                showMessage('Markdown converter service is not ready.', true);
+                console.error('Paste aborted: Turndown service not initialized.');
                 return;
             }
 
@@ -171,72 +175,133 @@
             const clipboardData = event.clipboardData || window.clipboardData;
             if (!clipboardData) {
                 showMessage('Could not access clipboard data.', true);
+                console.error('Paste aborted: Cannot access clipboard data.');
                 return;
             }
 
-            // Prioritize HTML content from the clipboard
-            const pastedHtml = clipboardData.getData('text/html');
-            const pastedText = clipboardData.getData('text/plain');
+            // Log available clipboard types
+            const types = clipboardData.types;
+            console.log('Clipboard data types:', types);
 
             let markdown = '';
-
+            let pastedHtml = '';
+            let pastedText = '';            // Try getting HTML and Plain Text data
             try {
-                if (pastedHtml) {
-                    console.log("Pasted HTML detected.");
-                    // Sanitize HTML slightly before conversion
-                    const cleanHtml = sanitizeHtml(pastedHtml);
-                    markdown = turndownService.turndown(cleanHtml);
-                } else if (pastedText) {
-                    console.log("Pasted Plain Text detected.");
-                    // Pass plain text through Turndown
-                    markdown = turndownService.turndown(pastedText);
+                console.log('Available clipboard types:', types);
+                if (types.includes('text/html')) {
+                    pastedHtml = clipboardData.getData('text/html');
+                    console.log('Retrieved HTML content:', pastedHtml.substring(0, 200));
                 } else {
-                    showMessage('No suitable content found on clipboard (HTML or Plain Text).', true);
-                    return;
+                    console.log('No text/html found on clipboard.');
                 }
 
-                // Display the converted Markdown
+                if (types.includes('text/plain')) {
+                    pastedText = clipboardData.getData('text/plain');
+                    console.log('Retrieved plain text:', pastedText.substring(0, 200));
+                } else {
+                    console.log('No text/plain found on clipboard.');
+                }
+
+            } catch (error) {
+                 console.error('Error retrieving data from clipboard:', error);
+                 showMessage('Error accessing clipboard content.', true);
+                 return;
+            }            // Process the retrieved data
+            try {
+                if (pastedHtml) {
+                    console.log("Processing pasted HTML...");
+                    if (!turndownService) {
+                        console.error("TurndownService is not initialized!");
+                        throw new Error("Markdown converter is not initialized.");
+                    }
+                    // Sanitize HTML using DOMPurify for better security
+                    const cleanHtml = sanitizeHtml(pastedHtml);
+                    if (cleanHtml === null) {
+                        console.error("HTML sanitization returned null");
+                        throw new Error("HTML sanitization failed.");
+                    }
+                    console.log("Sanitized HTML:", cleanHtml.substring(0, 100) + "...");
+                    
+                    try {
+                        markdown = turndownService.turndown(cleanHtml);
+                        console.log("Successfully converted HTML to Markdown:", markdown.substring(0, 100));
+                    } catch (turndownError) {
+                        console.error("Error in turndown conversion:", turndownError);
+                        throw turndownError;
+                    }
+                } else if (pastedText) {
+                    console.log("Processing pasted Plain Text as fallback...");
+                    if (!turndownService) {
+                        console.error("TurndownService is not initialized!");
+                        throw new Error("Markdown converter is not initialized.");
+                    }
+                    try {
+                        markdown = turndownService.turndown(pastedText);
+                        console.log("Successfully converted Plain Text to Markdown:", markdown.substring(0, 100));
+                    } catch (turndownError) {
+                        console.error("Error in turndown conversion:", turndownError);
+                        throw turndownError;
+                    }
+                } else {
+                    // Neither HTML nor Plain Text was successfully retrieved or processed
+                    showMessage('No suitable text content (HTML or Plain) found on clipboard.', true);
+                    console.warn('Paste ignored: No usable text/html or text/plain data found.');
+                    return; // Exit if no usable data
+                }
+
+                // Display the result
                 markdownOutput.value = markdown.trim();
+                console.log("Markdown output updated.");
                 hasMarkdown = markdownOutput.value.length > 0;
                 updateButtonStates();
                 clearMessage(); // Clear any previous messages
-                // Hide preview on new paste
-                renderPreviewContainer.classList.add('hidden');
+                renderPreviewContainer.classList.add('hidden'); // Hide preview on new paste
                 hidePasteHint(); // Hide hint after successful paste
 
             } catch (error) {
-                console.error('Error during Markdown conversion:', error);
-                showMessage('An error occurred during conversion.', true);
-                hasMarkdown = false;
-                updateButtonStates();
+                console.error('Error during Markdown conversion process:', error);
+                showMessage(`Conversion error: ${error.message}`, true);
+                // Optionally clear output on error, or leave the old content? Clearing seems safer.
+                // markdownOutput.value = '';
+                // hasMarkdown = false;
+                updateButtonStates(); // Ensure buttons reflect state after error
             }
         }
 
         function handleRender() {
             if (!hasMarkdown) return;
 
+            // First check if marked library is available
+            if (typeof marked === 'undefined') {
+                showMessage('Error: Markdown rendering library failed to load.', true);
+                console.error('Marked library not loaded.');
+                renderButton.disabled = true;
+                return;
+            }
+
             try {
-                if (typeof marked === 'undefined') {
-                    showMessage('Error: Markdown rendering library failed to load.', true);
-                    console.error('Marked library not loaded.');
-                    return;
-                }
-
                 const markdown = markdownOutput.value;
-                marked.setOptions({
-                    gfm: true,
-                    breaks: true,
-                    mangle: false,
-                    headerIds: false
+                // Configure marked with safe options
+                marked.setOptions({ 
+                    gfm: true, 
+                    breaks: true, 
+                    mangle: false, 
+                    headerIds: false,
+                    silent: true // Prevents marked from throwing errors
                 });
-                const html = marked.parse(markdown);
-                renderOutput.innerHTML = html; // Render into the output div
-                renderPreviewContainer.classList.remove('hidden'); // Show the preview container
+
+                // Sanitize the rendered HTML for extra security
+                const renderedHtml = marked.parse(markdown);
+                const sanitizedHtml = DOMPurify.sanitize(renderedHtml, {
+                    USE_PROFILES: { html: true },
+                    FORBID_TAGS: ['script', 'style', 'iframe', 'form'],
+                    FORBID_ATTR: ['onerror', 'onload', 'onclick']
+                });
+
+                renderOutput.innerHTML = sanitizedHtml;
+                renderPreviewContainer.classList.remove('hidden');
                 clearMessage();
-
-                // Scroll to the preview section
                 renderPreviewContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-
             } catch (error) {
                 console.error('Error rendering Markdown:', error);
                 showMessage('An error occurred while rendering the preview.', true);
@@ -245,18 +310,17 @@
         }
 
         function handleCopy() {
-            if (!hasMarkdown) return;
-
+            // (Function remains the same as before)
+             if (!hasMarkdown) return;
             navigator.clipboard.writeText(markdownOutput.value)
                 .then(() => {
                     showMessage('Markdown copied to clipboard!');
-                    // Visual feedback
                     const originalText = copyButton.innerHTML;
                     copyButton.innerHTML = '<i class="fas fa-check mr-2"></i>Copied!';
                     copyButton.disabled = true;
                     setTimeout(() => {
                         copyButton.innerHTML = originalText;
-                        updateButtonStates(); // Re-evaluate button states
+                        updateButtonStates();
                         clearMessage();
                     }, 2000);
                 })
@@ -266,24 +330,23 @@
                 });
         }
 
-        // New handler for the Clear button
         function handleClear() {
-            markdownOutput.value = ''; // Clear the textarea
-            renderOutput.innerHTML = ''; // Clear the preview area
-            renderPreviewContainer.classList.add('hidden'); // Hide the preview container
-            hasMarkdown = false; // Update state
-            updateButtonStates(); // Update button enabled/disabled states
-            clearMessage(); // Clear any messages
-            showPasteHint(); // Show the paste hint again
+            // (Function remains the same as before)
+            markdownOutput.value = '';
+            renderOutput.innerHTML = '';
+            renderPreviewContainer.classList.add('hidden');
+            hasMarkdown = false;
+            updateButtonStates();
+            clearMessage();
+            showPasteHint();
+             console.log('Content cleared.');
         }
-
 
         // --- Utility Functions ---
         function updateButtonStates() {
-            // Enable/disable buttons based on whether there is markdown content
             renderButton.disabled = !hasMarkdown;
             copyButton.disabled = !hasMarkdown;
-            clearButton.disabled = !hasMarkdown; // Also control the clear button state
+            clearButton.disabled = !hasMarkdown;
         }
 
         function showMessage(message, isError = false) {
@@ -296,22 +359,32 @@
         }
 
         function sanitizeHtml(htmlString) {
-            // VERY basic sanitizer - consider DOMPurify for production
-            let cleaned = htmlString.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
-            cleaned = cleaned.replace(/ on\w+="[^"]*"/g, '');
-            cleaned = cleaned.replace(/ on\w+='[^']*'/g, '');
-            cleaned = cleaned.replace(/ on\w+=[\w-]+/g, '');
-            cleaned = cleaned.replace(/ href="javascript:[^"]*"/g, ' href="#"');
-            cleaned = cleaned.replace(/ src="javascript:[^"]*"/g, ' src="#"');
-            return cleaned;
+            // Use DOMPurify if available, otherwise return original (less safe) or null
+            if (typeof DOMPurify !== 'undefined') {
+                 console.log('Sanitizing HTML with DOMPurify...');
+                 // Configuration: Allow common formatting tags, tables, links, images (adjust as needed)
+                 // Disallow scripts, styles, event handlers by default.
+                 return DOMPurify.sanitize(htmlString, {
+                     USE_PROFILES: {html: true}, // Use common HTML elements/attributes
+                     // FORBID_TAGS: ['style'], // Example: Explicitly forbid style tags if needed
+                     // FORBID_ATTR: ['style'] // Example: Forbid style attributes
+                 });
+            } else {
+                 console.warn('DOMPurify library not loaded. Skipping sanitization.');
+                 // Fallback: VERY basic removal (less secure, keep only for emergencies)
+                 // let cleaned = htmlString.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+                 // cleaned = cleaned.replace(/ on\w+="[^"]*"/g, ''); // etc.
+                 // return cleaned;
+                 // Or return null to indicate failure
+                 return null; // Indicate that sanitization could not be performed
+            }
         }
 
-        // Functions to show/hide the paste hint
+
         function showPasteHint() {
-            clearTimeout(hintTimeout); // Clear any existing hide timer
+            clearTimeout(hintTimeout);
             bodyElement.classList.add('show-paste-hint');
-             // Optional: Automatically hide after a few seconds if nothing is pasted
-            hintTimeout = setTimeout(hidePasteHint, 5000);
+            hintTimeout = setTimeout(hidePasteHint, 5000); // Hide after 5s
         }
 
         function hidePasteHint() {
@@ -319,14 +392,28 @@
              bodyElement.classList.remove('show-paste-hint');
         }
 
-
         // --- Initial Setup ---
         document.addEventListener('DOMContentLoaded', () => {
-            const initialized = initializeTurndown();
-            if (initialized) {
-                 // Only proceed if initialization was successful
-                 updateButtonStates(); // Ensure buttons are initially disabled correctly
+            console.log('DOM fully loaded and parsed.');
+            // Check if DOMPurify is loaded, if not retry a few times
+            let attempts = 0;
+            const maxAttempts = 3;
+            
+            function tryInitialize() {
+                if (typeof DOMPurify !== 'undefined') {
+                    console.log('DOMPurify loaded successfully.');
+                    initializeTurndown();
+                } else if (attempts < maxAttempts) {
+                    attempts++;
+                    console.log(`DOMPurify not loaded yet, retrying... (attempt ${attempts}/${maxAttempts})`);
+                    setTimeout(tryInitialize, 1000); // Wait 1 second before retrying
+                } else {
+                    console.error('DOMPurify failed to load after multiple attempts');
+                    showMessage('Error: Required libraries failed to load. Please refresh the page.', true);
+                }
             }
+            
+            tryInitialize();
         });
 
     </script>
