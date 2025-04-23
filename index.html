@@ -10,31 +10,53 @@
     <script src="https://unpkg.com/turndown-plugin-gfm/dist/turndown-plugin-gfm.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
-        /* Add some basic styling for the contenteditable placeholder */
-        .paste-area:empty::before {
-            content: attr(data-placeholder);
-            color: #9ca3af; /* gray-400 */
-            cursor: text;
-        }
         /* Style for the rendered HTML output */
         .rendered-markdown-content {
-            /* Basic prose styling */
-            prose-p:text-base prose-p:leading-relaxed;
-            prose-headings:text-xl prose-headings:font-semibold prose-headings:mt-4 prose-headings:mb-2;
-            prose-ul:list-disc prose-ul:ml-6;
-            prose-ol:list-decimal prose-ol:ml-6;
-            prose-blockquote:border-l-4 prose-blockquote:pl-4 prose-blockquote:italic;
-            prose-code:bg-gray-100 prose-code:p-1 prose-code:rounded;
-            prose-pre:bg-gray-800 prose-pre:text-white prose-pre:p-4 prose-pre:rounded prose-pre:overflow-x-auto;
-            prose-a:text-blue-600 hover:prose-a:underline;
-            prose-strong:font-bold;
-            prose-em:italic;
+            /* Basic prose styling (Tailwind Typography plugin classes can also be used if preferred) */
+            h1 { @apply text-2xl font-bold my-4; }
+            h2 { @apply text-xl font-semibold my-3; }
+            h3 { @apply text-lg font-semibold my-2; }
+            p { @apply my-2 leading-relaxed; }
+            ul { @apply list-disc list-inside my-2 ml-4; }
+            ol { @apply list-decimal list-inside my-2 ml-4; }
+            blockquote { @apply border-l-4 border-gray-300 pl-4 italic my-2 text-gray-600; }
+            code:not(pre code) { @apply bg-gray-100 text-red-600 px-1 py-0.5 rounded text-sm; } /* Inline code */
+            pre { @apply bg-gray-800 text-white p-4 rounded overflow-x-auto my-2 text-sm; } /* Code block */
+            pre code { @apply bg-transparent text-white p-0 rounded-none; } /* Code inside pre */
+            a { @apply text-blue-600 hover:underline; }
+            strong { @apply font-bold; }
+            em { @apply italic; }
+            table { @apply table-auto border-collapse border border-gray-300 my-4 w-full; }
+            th, td { @apply border border-gray-200 px-4 py-2 text-left; }
+            th { @apply bg-gray-100 font-semibold; }
+            hr { @apply my-4 border-t border-gray-300; }
         }
         /* Ensure buttons have good touch target size */
         button {
-            min-height: 44px;
+            min-height: 44px; /* Standard touch target size */
             min-width: 44px;
         }
+        /* Add a subtle hint for pasting */
+        body::before {
+            content: 'Paste anywhere to convert...';
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            pointer-events: none; /* Don't interfere with clicks */
+            z-index: 10;
+        }
+        body.show-paste-hint::before {
+            opacity: 1;
+        }
+
     </style>
 </head>
 <body class="bg-gray-100 font-sans flex flex-col items-center min-h-screen p-4 md:p-8">
@@ -42,16 +64,7 @@
     <div class="w-full max-w-4xl bg-white rounded-lg shadow-md p-6">
         <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">Rich Text to Markdown Converter</h1>
 
-        <div class="mb-4">
-            <label for="paste-area" class="block text-sm font-medium text-gray-700 mb-1">Paste your rich text content here:</label>
-            <div
-                id="paste-area"
-                contenteditable="true"
-                data-placeholder="Click here and paste (Ctrl+V / Cmd+V)"
-                class="paste-area w-full h-40 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent overflow-auto resize-y bg-white"
-                aria-label="Paste area for rich text"
-            ></div>
-        </div>
+        <p class="text-center text-gray-600 mb-6">Paste (Ctrl+V / Cmd+V) anywhere on the page.</p>
 
         <div class="mb-4">
             <label for="markdown-output" class="block text-sm font-medium text-gray-700 mb-1">Generated Markdown:</label>
@@ -60,16 +73,19 @@
                 readonly
                 class="w-full h-60 p-3 border border-gray-300 rounded-md bg-gray-50 font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 aria-label="Generated Markdown output"
-                placeholder="Markdown will appear here..."
+                placeholder="Markdown will appear here after pasting..."
             ></textarea>
         </div>
 
-        <div class="flex flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-4 mb-6">
-            <button id="render-button" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
+        <div class="flex flex-col sm:flex-row justify-center items-center space-y-2 sm:space-y-0 sm:space-x-3 mb-6">
+            <button id="render-button" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
                 <i class="fas fa-eye mr-2"></i>Render Preview
             </button>
-            <button id="copy-button" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
+            <button id="copy-button" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
                 <i class="fas fa-copy mr-2"></i>Copy Markdown
+            </button>
+            <button id="clear-button" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
+                <i class="fas fa-trash-alt mr-2"></i>Clear Content
             </button>
         </div>
 
@@ -79,23 +95,26 @@
                  </div>
         </div>
 
-         <div id="message-area" class="text-center text-sm text-green-600 mt-4 h-5"></div>
+         <div id="message-area" class="text-center text-sm mt-4 h-5"></div>
 
     </div>
 
     <script>
         // --- DOM Elements ---
-        const pasteArea = document.getElementById('paste-area');
+        // No pasteArea needed anymore
         const markdownOutput = document.getElementById('markdown-output');
         const renderButton = document.getElementById('render-button');
         const copyButton = document.getElementById('copy-button');
+        const clearButton = document.getElementById('clear-button'); // New button
         const renderPreviewContainer = document.getElementById('render-preview-container');
         const renderOutput = document.getElementById('render-output');
         const messageArea = document.getElementById('message-area');
+        const bodyElement = document.body; // For paste hint
 
         // --- State ---
         let turndownService = null; // Initialize later
-        let hasMarkdown = false; // Track if there is content to render/copy
+        let hasMarkdown = false; // Track if there is content to render/copy/clear
+        let hintTimeout = null; // Timeout for paste hint
 
         // --- Initialization ---
         function initializeTurndown() {
@@ -110,25 +129,38 @@
                 // Use the GFM plugin
                 turndownService.use(turndownPluginGfm.gfm);
                 console.log('Turndown service initialized with GFM plugin.');
+                showPasteHint(); // Show hint on load
             } else {
                 console.error('TurndownService or GFM plugin not loaded.');
-                // Disable functionality or show an error message
                 showMessage('Error: Markdown conversion library failed to load.', true);
-                pasteArea.contentEditable = false; // Prevent pasting if library fails
+                // Disable functionality if library fails
                 renderButton.disabled = true;
                 copyButton.disabled = true;
+                clearButton.disabled = true;
+                // Prevent pasting by not adding the listener if service failed
+                return false; // Indicate failure
             }
+            return true; // Indicate success
         }
 
         // --- Event Listeners ---
-        pasteArea.addEventListener('paste', handlePaste);
+        // Listen for paste on the entire document
+        document.addEventListener('paste', handlePaste);
         renderButton.addEventListener('click', handleRender);
         copyButton.addEventListener('click', handleCopy);
+        clearButton.addEventListener('click', handleClear); // Listener for the new button
 
         // --- Event Handlers ---
         function handlePaste(event) {
-            // Prevent the default paste behavior (inserting rich text directly)
-            event.preventDefault();
+            // Prevent the default paste behavior only if the target isn't an input/textarea
+            // (though we don't have any others here, it's good practice)
+            if (event.target.tagName !== 'INPUT' && event.target.tagName !== 'TEXTAREA' && !event.target.isContentEditable) {
+                 event.preventDefault();
+            } else {
+                // Allow default paste in inputs/textareas if any existed
+                return;
+            }
+
 
             if (!turndownService) {
                 showMessage('Markdown converter is not ready.', true);
@@ -151,17 +183,13 @@
             try {
                 if (pastedHtml) {
                     console.log("Pasted HTML detected.");
-                    // Sanitize HTML slightly before conversion (basic example)
-                    // A more robust sanitizer might be needed for complex cases
+                    // Sanitize HTML slightly before conversion
                     const cleanHtml = sanitizeHtml(pastedHtml);
                     markdown = turndownService.turndown(cleanHtml);
                 } else if (pastedText) {
                     console.log("Pasted Plain Text detected.");
-                    // If only plain text, treat it as pre-formatted (escape Markdown characters)
-                    // or just pass it through if simple Markdown conversion is desired.
-                    // For simplicity here, we'll just pass it through Turndown
-                    // which will handle basic escaping.
-                    markdown = turndownService.turndown(pastedText); // Turndown handles basic text reasonably
+                    // Pass plain text through Turndown
+                    markdown = turndownService.turndown(pastedText);
                 } else {
                     showMessage('No suitable content found on clipboard (HTML or Plain Text).', true);
                     return;
@@ -172,11 +200,9 @@
                 hasMarkdown = markdownOutput.value.length > 0;
                 updateButtonStates();
                 clearMessage(); // Clear any previous messages
-                // Optionally clear the paste area after successful paste
-                pasteArea.innerHTML = '';
                 // Hide preview on new paste
                 renderPreviewContainer.classList.add('hidden');
-
+                hidePasteHint(); // Hide hint after successful paste
 
             } catch (error) {
                 console.error('Error during Markdown conversion:', error);
@@ -190,7 +216,6 @@
             if (!hasMarkdown) return;
 
             try {
-                // Check if Marked library is loaded
                 if (typeof marked === 'undefined') {
                     showMessage('Error: Markdown rendering library failed to load.', true);
                     console.error('Marked library not loaded.');
@@ -198,25 +223,24 @@
                 }
 
                 const markdown = markdownOutput.value;
-                // Configure marked (optional, but good practice)
                 marked.setOptions({
-                    gfm: true, // Enable GitHub Flavored Markdown
-                    breaks: true, // Convert single line breaks to <br>
-                    mangle: false, // Disable email address obfuscation
-                    headerIds: false // Disable automatic header IDs
+                    gfm: true,
+                    breaks: true,
+                    mangle: false,
+                    headerIds: false
                 });
                 const html = marked.parse(markdown);
-                renderOutput.innerHTML = html;
+                renderOutput.innerHTML = html; // Render into the output div
                 renderPreviewContainer.classList.remove('hidden'); // Show the preview container
                 clearMessage();
 
-                // Scroll to the preview section for better visibility on small screens
+                // Scroll to the preview section
                 renderPreviewContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
             } catch (error) {
                 console.error('Error rendering Markdown:', error);
                 showMessage('An error occurred while rendering the preview.', true);
-                renderPreviewContainer.classList.add('hidden'); // Hide preview on error
+                renderPreviewContainer.classList.add('hidden');
             }
         }
 
@@ -226,15 +250,15 @@
             navigator.clipboard.writeText(markdownOutput.value)
                 .then(() => {
                     showMessage('Markdown copied to clipboard!');
-                    // Provide visual feedback on the button
+                    // Visual feedback
                     const originalText = copyButton.innerHTML;
                     copyButton.innerHTML = '<i class="fas fa-check mr-2"></i>Copied!';
-                    copyButton.disabled = true; // Briefly disable
+                    copyButton.disabled = true;
                     setTimeout(() => {
                         copyButton.innerHTML = originalText;
-                        copyButton.disabled = !hasMarkdown; // Re-enable based on content
-                        clearMessage(); // Clear the success message after a delay
-                    }, 2000); // Reset after 2 seconds
+                        updateButtonStates(); // Re-evaluate button states
+                        clearMessage();
+                    }, 2000);
                 })
                 .catch(err => {
                     console.error('Failed to copy text: ', err);
@@ -242,10 +266,24 @@
                 });
         }
 
+        // New handler for the Clear button
+        function handleClear() {
+            markdownOutput.value = ''; // Clear the textarea
+            renderOutput.innerHTML = ''; // Clear the preview area
+            renderPreviewContainer.classList.add('hidden'); // Hide the preview container
+            hasMarkdown = false; // Update state
+            updateButtonStates(); // Update button enabled/disabled states
+            clearMessage(); // Clear any messages
+            showPasteHint(); // Show the paste hint again
+        }
+
+
         // --- Utility Functions ---
         function updateButtonStates() {
+            // Enable/disable buttons based on whether there is markdown content
             renderButton.disabled = !hasMarkdown;
             copyButton.disabled = !hasMarkdown;
+            clearButton.disabled = !hasMarkdown; // Also control the clear button state
         }
 
         function showMessage(message, isError = false) {
@@ -258,22 +296,37 @@
         }
 
         function sanitizeHtml(htmlString) {
-            // VERY basic sanitizer: removes <script> tags and attributes starting with 'on'
-
-            // Basic removal (less secure)
-            let cleaned = htmlString.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ''); // Remove script blocks
-            cleaned = cleaned.replace(/ on\w+="[^"]*"/g, ''); // Remove on... event handlers
-            cleaned = cleaned.replace(/ on\w+='[^']*'/g, ''); // Remove on... event handlers (single quotes)
-            cleaned = cleaned.replace(/ on\w+=[\w-]+/g, ''); // Remove on... event handlers (no quotes)
-            cleaned = cleaned.replace(/ href="javascript:[^"]*"/g, ' href="#"'); // Neutralize javascript: links
-             cleaned = cleaned.replace(/ src="javascript:[^"]*"/g, ' src="#"'); // Neutralize javascript: links in src
+            // VERY basic sanitizer - consider DOMPurify for production
+            let cleaned = htmlString.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+            cleaned = cleaned.replace(/ on\w+="[^"]*"/g, '');
+            cleaned = cleaned.replace(/ on\w+='[^']*'/g, '');
+            cleaned = cleaned.replace(/ on\w+=[\w-]+/g, '');
+            cleaned = cleaned.replace(/ href="javascript:[^"]*"/g, ' href="#"');
+            cleaned = cleaned.replace(/ src="javascript:[^"]*"/g, ' src="#"');
             return cleaned;
         }
 
+        // Functions to show/hide the paste hint
+        function showPasteHint() {
+            clearTimeout(hintTimeout); // Clear any existing hide timer
+            bodyElement.classList.add('show-paste-hint');
+             // Optional: Automatically hide after a few seconds if nothing is pasted
+            hintTimeout = setTimeout(hidePasteHint, 5000);
+        }
+
+        function hidePasteHint() {
+             clearTimeout(hintTimeout);
+             bodyElement.classList.remove('show-paste-hint');
+        }
+
+
         // --- Initial Setup ---
         document.addEventListener('DOMContentLoaded', () => {
-            initializeTurndown();
-            updateButtonStates(); // Ensure buttons are initially disabled
+            const initialized = initializeTurndown();
+            if (initialized) {
+                 // Only proceed if initialization was successful
+                 updateButtonStates(); // Ensure buttons are initially disabled correctly
+            }
         });
 
     </script>
