@@ -2,7 +2,7 @@
 
 A sleek, modern web application that instantly converts rich text content into clean, well-formatted Markdown. Perfect for developers, writers, and content creators who work with Markdown.
 
-![Rich Text to Markdown Converter](https://i.imgur.com/placeholder.png) <!-- Replace with actual screenshot -->
+![Rich Text to Markdown Converter](screenshot.png)
 
 ## ✨ Features
 
