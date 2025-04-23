@@ -1,8 +1,18 @@
 # 📝 Rich Text to Markdown Converter
 
+![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat&logo=html5&logoColor=white)
+![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=flat&logo=css3&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat&logo=javascript&logoColor=black)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat&logo=tailwind-css&logoColor=white)
+![Markdown](https://img.shields.io/badge/Markdown-000000?style=flat&logo=markdown&logoColor=white)
+![DOMPurify](https://img.shields.io/badge/DOMPurify-8B0000?style=flat&logo=javascript&logoColor=white)
+![Font Awesome](https://img.shields.io/badge/Font_Awesome-339AF0?style=flat&logo=font-awesome&logoColor=white)
+
 A sleek, modern web application that instantly converts rich text content into clean, well-formatted Markdown. Perfect for developers, writers, and content creators who work with Markdown.
 
 ![Rich Text to Markdown Converter](screenshot.png)
+
+
 
 ## ✨ Features
 
