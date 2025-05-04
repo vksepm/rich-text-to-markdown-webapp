@@ -3,18 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rich Text to Markdown Converter</title>    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.10/purify.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <title>Rich Text to Markdown Converter</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.10/purify.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <script src="https://unpkg.com/turndown/dist/turndown.js"></script>
     <script src="https://unpkg.com/turndown-plugin-gfm/dist/turndown-plugin-gfm.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <style>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>    <style>
+        /* Set Google Sans as the default font */
+        :root {
+            --font-family-base: 'Google Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            --font-family-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+
+        body {
+            font-family: var(--font-family-base);
+        }
+
         /* Standard CSS for rendered Markdown content */
-        .rendered-markdown-content h1 { font-size: 1.875rem; font-weight: 700; margin-top: 1rem; margin-bottom: 1rem; }
-        .rendered-markdown-content h2 { font-size: 1.5rem; font-weight: 600; margin-top: 0.75rem; margin-bottom: 0.75rem; }
-        .rendered-markdown-content h3 { font-size: 1.25rem; font-weight: 600; margin-top: 0.5rem; margin-bottom: 0.5rem; }
-        .rendered-markdown-content h4 { font-size: 1.125rem; font-weight: 600; margin-top: 0.5rem; margin-bottom: 0.5rem; }
+        .rendered-markdown-content h1 { font-size: 1.875rem; font-weight: 700; margin-top: 1rem; margin-bottom: 1rem; font-family: var(--font-family-base); }
+        .rendered-markdown-content h2 { font-size: 1.5rem; font-weight: 600; margin-top: 0.75rem; margin-bottom: 0.75rem; font-family: var(--font-family-base); }
+        .rendered-markdown-content h3 { font-size: 1.25rem; font-weight: 600; margin-top: 0.5rem; margin-bottom: 0.5rem; font-family: var(--font-family-base); }
+        .rendered-markdown-content h4 { font-size: 1.125rem; font-weight: 600; margin-top: 0.5rem; margin-bottom: 0.5rem; font-family: var(--font-family-base); }
         .rendered-markdown-content p { margin-top: 0.5rem; margin-bottom: 0.5rem; line-height: 1.625; }
         .rendered-markdown-content ul { list-style-type: disc; list-style-position: inside; margin-top: 0.5rem; margin-bottom: 0.5rem; margin-left: 1rem; }
         .rendered-markdown-content ol { list-style-type: decimal; list-style-position: inside; margin-top: 0.5rem; margin-bottom: 0.5rem; margin-left: 1rem; }
@@ -38,6 +51,13 @@
         /* Paste hint styling */
         body::before { content: 'Paste anywhere to convert...'; position: fixed; top: 10px; left: 50%; transform: translateX(-50%); background-color: rgba(0, 0, 0, 0.6); color: white; padding: 5px 15px; border-radius: 15px; font-size: 0.8rem; opacity: 0; transition: opacity 0.5s ease-in-out; pointer-events: none; z-index: 10; }
         body.show-paste-hint::before { opacity: 1; }
+        /* Apply Google Sans font to the body */
+        body::before {
+            font-family: var(--font-family-base);
+        }
+        body {
+            font-family: var(--font-family-base);
+        }
     </style>
 </head>
 <body class="bg-gray-100 font-sans flex flex-col items-center min-h-screen p-4 md:p-8">
